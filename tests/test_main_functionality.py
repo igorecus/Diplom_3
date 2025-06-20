@@ -1,78 +1,99 @@
-import pytest
 import allure
-from pages.constructor_page import ConstructorPage
-from pages.ingredient_details_page import IngredientDetailsPage
-from pages.order_details_page import OrderDetailsPage
-from pages.login_page import LoginPage
-from pages.personal_account_page import PersonalAccountPage
+from pages.main_page import MainPage
+from pages.order_feed_page import OrderFeedPage
 
 
-@pytest.mark.usefixtures('driver')
 class TestMainFunctionality:
 
-    @allure.title('Проверка перехода на страницу конструктора')
-    def test_navigation_to_constructor(self, driver, login):
-        constructor_page = ConstructorPage(driver)
-        constructor_page.go_to_constructor()
-        assert '/#/' in driver.current_url
+    @allure.title("Проверка перехода по клику на «Конструктор»")
+    def test_transition_to_constructor_page_by_clicking_constructor_button(self, driver):
+        main_page = MainPage(driver)
 
-    @allure.title('Проверка открытия модального окна с деталями ингредиента')
-    def test_ingredient_modal(self, driver, login):
-        constructor_page = ConstructorPage(driver).open()
-        constructor_page.open_ingredient()
+        main_page.open_main_page()
+        main_page.page_loading_wait()
+        main_page.click_constructor_button()
 
-        ingredient_details = IngredientDetailsPage(driver)
-        assert ingredient_details.is_visible()
+        actual_text = main_page.get_page_constructor_name()
+        expected_text = "Соберите бургер"
+        assert actual_text == expected_text, f"Ожидался текст '{expected_text}', а получен '{actual_text}'"
 
-        ingredient_details.close()
+    @allure.title("Проверка перехода по клику на «Лента заказов»")
+    def test_transition_to_feed_page_by_clicking_order_feed_button(self, driver):
+        main_page = MainPage(driver)
+        order_feed_page = OrderFeedPage(driver)
 
-    @allure.title('Проверка увеличения счетчика ингредиентов')
-    def test_counter_increase(self, driver, login):
-        constructor_page = ConstructorPage(driver).open()
+        main_page.open_main_page()
+        main_page.page_loading_wait()
+        main_page.click_order_feed_button()
 
-        constructor_page.select_buns()
-        before = constructor_page.get_counter()
+        actual_text = order_feed_page.get_order_feed_page_name()
+        expected_text = "Лента заказов"
+        assert actual_text == expected_text, f"Ожидался текст '{expected_text}', а получен '{actual_text}'"
 
-        constructor_page.open_ingredient()
+    @allure.title("Проверка появления всплывающего окна с деталями при клике на ингредиент")
+    def test_presense_ingredient_details_popup_after_clicking_on_ingredient_icon(self, driver):
+        main_page = MainPage(driver)
 
-        after = constructor_page.get_counter()
+        main_page.open_main_page()
+        main_page.page_loading_wait()
+        main_page.click_ingredient_bun_button()
 
-        assert after > before
+        actual_text = main_page.get_details_window_name()
+        expected_text = "Детали ингредиента"
+        assert actual_text == expected_text, f"Ожидался текст '{expected_text}', а получен '{actual_text}'"
 
-    @allure.title('Проверка оформления заказа авторизованным пользователем')
-    def test_place_order(self, driver, login):
-        constructor_page = ConstructorPage(driver).open()
+        main_page.click_close_up_ingredient_details_popup_button()
+        main_page.click_ingredient_sauce_button()
 
-        constructor_page.select_buns()
-        constructor_page.add_ingredient()
+        actual_text2 = main_page.get_details_window_name()
+        expected_text2 = "Детали ингредиента"
+        assert actual_text2 == expected_text2, f"Ожидался текст '{expected_text2}', а получен '{actual_text2}'"
 
-        assert constructor_page.has_bun()
+        main_page.click_close_up_ingredient_details_popup_button()
+        main_page.scroll_to_magnolia_patty()
+        main_page.click_ingredient_topping_button()
 
-        constructor_page.place_order()
+        actual_text3 = main_page.get_details_window_name()
+        expected_text3 = "Детали ингредиента"
+        assert actual_text3 == expected_text3, f"Ожидался текст '{expected_text3}', а получен '{actual_text3}'"
 
-        order_details = OrderDetailsPage(driver)
-        assert order_details.is_visible()
+    @allure.title("Проверка закрытия всплывающего окна кликом по крестику")
+    def test_close_ingredient_modal_by_cross_button(self, driver):
+        main_page = MainPage(driver)
 
+        main_page.open_main_page()
+        main_page.page_loading_wait()
+        main_page.click_ingredient_bun_button()
 
-@pytest.mark.usefixtures('driver')
-class TestPersonalAccount:
+        title = main_page.get_details_window_name()
+        assert title == "Детали ингредиента", "Модальное окно не открылось"
 
-    @allure.title('Проверка перехода в личный кабинет')
-    def test_account_navigation(self, driver, login):
-        account_page = PersonalAccountPage(driver)
-        account_page.open_account()
-        assert '/account' in driver.current_url
+        main_page.click_close_up_ingredient_details_popup_button()
+        main_page.wait_for_ingredient_modal_to_disappear()
 
-    @allure.title('Проверка перехода в историю заказов')
-    def test_history_navigation(self, driver, login):
-        account_page = PersonalAccountPage(driver)
-        account_page.open_account().open_history()
-        assert '/order-history' in driver.current_url
+    @allure.title('Проверка увеличения каунтера ингридиента при добавлении в заказ')
+    def test_counter_increase_when_adding_ingredient_into_basket(self, driver):
+        main_page = MainPage(driver)
 
-    @allure.title('Проверка выхода из аккаунта')
-    def test_logout(self, driver, login):
-        account_page = PersonalAccountPage(driver)
-        account_page.open_account().logout()
+        main_page.open_main_page()
+        main_page.page_loading_wait()
 
-        login_page = LoginPage(driver)
-        assert login_page.element_is_displayed(login_page.AUTH_SUBMIT_BUTTON)
+        initial_count = main_page.get_ingredient_counter_count()
+        assert initial_count == 0, f"Ожидалось значение 0, а получено '{initial_count}'"
+
+        main_page.put_ingredient_into_basket()
+
+        updated_count = main_page.get_ingredient_counter_count()
+        assert updated_count > 0, f"Ожидалось значение > 0, а получено '{updated_count}'"
+
+    @allure.title('Проверка возможности оформления заказа залогиненым пользователем')
+    def test_the_possibility_of_placing_an_order_by_a_logged_in_user(self, driver, login):
+        main_page = MainPage(driver)
+
+        main_page.page_loading_wait()
+        main_page.put_ingredient_into_basket()
+        main_page.click_order_button()
+        main_page.page_loading_wait()
+
+        text = main_page.get_order_has_already_been_prepared_message_text()
+        assert text == "Ваш заказ начали готовить", "Кто-то сегодня будет голодный;-)"

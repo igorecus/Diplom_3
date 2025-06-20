@@ -1,124 +1,69 @@
-import pytest
 import allure
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
-from locators import Locators
+from pages.login_page import LoginPage
+from helper import generate_registration_data
+from pages.forgot_password_page import ForgotPasswordPage
+from pages.reset_password_page import ResetPasswordPage
+from pages.main_page import MainPage
 
 
-@pytest.mark.usefixtures('driver')
-class TestRecoveryPassword:
+class TestRestorePassword:
 
-    @allure.title('Проверка перехода на страницу восстановления пароля')
-    def test_navigate_to_forgot_password(self, driver):
-        try:
-            driver.get("https://stellarburgers.nomoreparties.site/login")
+    @allure.title('Проверка перехода на страницу восстановления пароля по кнопке «Восстановить пароль»')
+    def test_the_transition_to_the_forgot_password_page_by_clicking_on_the_restore_password_link(self, driver):
+        login_page = LoginPage(driver)
+        forgot_password_page = ForgotPasswordPage(driver)
+        main_page = MainPage(driver)
 
-            WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable(Locators.RESTORE_ACCESS_LINK)
-            ).click()
+        login_page.open_login_page()
+        main_page.page_loading_wait()
+        login_page.click_restore_password_link()
+        actual_page_title = forgot_password_page.check_forgot_password_page_name()
 
-            WebDriverWait(driver, 10).until(
-                lambda d: 'forgot-password' in d.current_url
-            )
-            assert 'forgot-password' in driver.current_url
-        except Exception as e:
-            allure.attach(
-                driver.get_screenshot_as_png(),
-                name="navigate_to_forgot_password_error",
-                attachment_type=allure.attachment_type.PNG
-            )
-            pytest.fail(f"Ошибка при переходе на страницу восстановления пароля: {e}")
+        assert actual_page_title == "Восстановление пароля", f"Ожидали 'Восстановление пароля', получили '{actual_page_title}'"
 
-    @allure.title('Проверка ввода email на странице восстановления пароля')
-    def test_submit_email(self, driver, generate_user_credentials):
-        """Проверка ввода email и клика по кнопке 'Восстановить' на странице восстановления пароля"""
-        try:
-            email, _, _ = generate_user_credentials
 
-            driver.get("https://stellarburgers.nomoreparties.site/forgot-password")
+    @allure.title('Проверка ввода почты и клик по кнопке «Восстановить»')
+    def test_email_input_and_clicking_on_the_restore_button(self, driver):
+        forgot_password_page = ForgotPasswordPage(driver)
+        main_page = MainPage(driver)
+        reset_password_page = ResetPasswordPage(driver)
 
-            email_field = WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located(Locators.RESTORE_EMAIL_FIELD)
-            )
-            email_field.clear()
-            email_field.send_keys(email)
+        email, _ = generate_registration_data()
 
-            WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable(Locators.RESTORE_SUBMIT_BTN)
-            ).click()
+        forgot_password_page.open_forgot_password_page()
+        main_page.page_loading_wait()
+        forgot_password_page.check_forgot_password_page_name()
+        forgot_password_page.email_input(email)
+        forgot_password_page.click_restore_button()
 
-            WebDriverWait(driver, 10).until(
-                lambda d: 'reset-password' in d.current_url
-            )
-            assert 'reset-password' in driver.current_url, "URL не содержит reset-password"
+        actual_page_url = reset_password_page.check_opened_page_name_is_reset_password()
+        assert '/reset-password' in actual_page_url
 
-            save_button = WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located(Locators.SAVE_PASSWORD_BTN)
-            )
-            assert save_button.is_displayed(), "Кнопка 'Сохранить' не отображается"
-        except Exception as e:
-            allure.attach(
-                driver.get_screenshot_as_png(),
-                name="submit_email_error",
-                attachment_type=allure.attachment_type.PNG
-            )
-            pytest.fail(f"Ошибка при отправке email для восстановления: {e}")
 
-    @allure.title('Проверка работы кнопки показать/скрыть пароль')
-    def test_show_hide_password_focus(self, driver, generate_user_credentials):
-        try:
-            email, _, _ = generate_user_credentials
-            driver.get("https://stellarburgers.nomoreparties.site/login")
-            WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable(Locators.RESTORE_ACCESS_LINK)
-            ).click()
+    @allure.title('Проверка, что клик по кнопке показать/скрыть пароль делает поле активным — подсвечивает его')
+    def test_show_hide_password_button_make_password_field_active(self, driver):
+        forgot_password_page = ForgotPasswordPage(driver)
+        reset_password_page = ResetPasswordPage(driver)
+        main_page = MainPage(driver)
+        email, password = generate_registration_data()
 
-            email_field = WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located(Locators.RESTORE_EMAIL_FIELD)
-            )
-            email_field.clear()
-            email_field.send_keys(email)
+        forgot_password_page.open_forgot_password_page()
+        main_page.page_loading_wait()
+        forgot_password_page.check_forgot_password_page_name()
+        forgot_password_page.email_input(email)
+        forgot_password_page.click_restore_button()
 
-            WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable(Locators.RESTORE_SUBMIT_BTN)
-            ).click()
+        main_page.page_loading_wait()
+        reset_password_page.check_password_field_by_default()
+        reset_password_page.password_input(password)
 
-            WebDriverWait(driver, 10).until(
-                lambda d: 'reset-password' in d.current_url
-            )
+        input_type_before = reset_password_page.get_password_input_type_before_password_field_be_activated()
+        assert input_type_before == "password", "Ожидалось, что до клика поле будет иметь type='password'"
 
-            driver.execute_script("""
-                var elements = document.querySelectorAll('.Modal_modal__overlay__x2ZCr, [class*="Modal_modal_overlay"], [class*="Modal_modal"]');
-                if (elements.length > 0) {
-                    elements.forEach(el => el.remove());
-                }
-            """)
+        reset_password_page.click_show_password_icon()
 
-            password_field = WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located(Locators.PASSWORD_INPUT_FIELD)
-            )
-            assert password_field.is_displayed(), "Поле ввода пароля не отображается"
+        active_field = reset_password_page.check_password_field_is_active()
+        assert active_field is not None, "Поле пароля не стало активным после клика на иконку"
 
-            is_active_before = driver.execute_script("""
-                var field = arguments[0];
-                return (document.activeElement === field);
-            """, password_field)
-
-            toggle_button = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable(Locators.PASSWORD_TOGGLE_BTN)
-            )
-
-            driver.execute_script("arguments[0].click();", toggle_button)
-
-            active_field = WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located(Locators.PASSWORD_FIELD_ACTIVE)
-            )
-            assert active_field.is_displayed(), "Поле пароля не стало активным после клика по иконке 'глаз'"
-
-        except Exception as e:
-            allure.attach(
-                driver.get_screenshot_as_png(),
-                name="show_hide_password_error",
-                attachment_type=allure.attachment_type.PNG
-            )
-            pytest.fail(f"Ошибка при проверке переключения видимости пароля: {e}")
+        input_type_after = reset_password_page.get_password_input_type_after_password_field_was_activated()
+        assert input_type_after == "text", "Ожидалось, что после клика поле будет иметь type='text'"

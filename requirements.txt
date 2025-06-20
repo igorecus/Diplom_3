@@ -4,3 +4,5 @@ Faker==37.1.0
 pytest==8.3.5
 requests==2.32.3
 selenium==4.31.0
+data~=0.4
+seletools~=1.5.0
