@@ -64,3 +64,10 @@ class BasePage:
     @allure.step("Ожидание, что URL содержит: {partial_url}")
     def wait_for_url_contains(self, partial_url, timeout=5):
         WebDriverWait(self.driver, timeout).until(EC.url_contains(partial_url))
+
+    @allure.step("Подождать, пока текст элемента станет равен: {expected_text}")
+    def wait_for_text_on_element(self, locator, expected_text, timeout=10):
+        WebDriverWait(self.driver, timeout).until(
+            EC.text_to_be_present_in_element(locator, expected_text),
+            message=f"Текст '{expected_text}' не появился в элементе по локатору {locator}"
+        )

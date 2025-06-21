@@ -88,3 +88,5 @@ class MainPage(BasePage):
         self.wait_for_element_to_be_clickable(MainPageLocators.CLOSE_MODAL_WINDOW_BUTTON, timeout=15)
         self.click_on_element(MainPageLocators.CLOSE_MODAL_WINDOW_BUTTON)
 
+
+
